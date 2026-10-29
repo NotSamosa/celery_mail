@@ -1,0 +1,34 @@
+{% extends "emails/base_email.html" %}
+
+{% block header_title %}System Notification{% endblock %}
+
+{% block content %}
+    <h2>Notice for {{ recipient_name|default:"User" }}</h2>
+    <div style="background-color: #f1f5f9; padding: 16px; border-left: 4px solid #2563eb; border-radius: 4px; margin: 16px 0;">
+        <p style="margin: 0; font-size: 15px; color: #1e293b;">
+            <strong>Subject:</strong> {{ subject }}
+        </p>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        {{ message|linebreaks }}
+    </div>
+
+    {% if details %}
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        {% for key, val in details.items %}
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: 600; color: #475569; width: 35%;">{{ key }}</td>
+            <td style="padding: 8px 0; color: #1e293b;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if action_url %}
+    <div class="button-wrapper">
+        <a href="{{ action_url }}" class="btn" target="_blank">{{ action_text|default:"View Details" }}</a>
+    </div>
+    {% endif %}
+{% endblock %}
+

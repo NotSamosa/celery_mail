@@ -1,0 +1,20 @@
+{% extends "emails/base_email.html" %}
+
+{% block header_title %}Welcome to Our Platform!{% endblock %}
+
+{% block content %}
+    <h2>Hello {{ name|default:"there" }},</h2>
+    <p>We are thrilled to welcome you aboard. Your account has been successfully configured and is ready to use.</p>
+    
+    <p>{{ message|default:"You can now explore all the features of our asynchronous task platform powered by Django and Celery." }}</p>
+
+    {% if action_url %}
+    <div class="button-wrapper">
+        <a href="{{ action_url }}" class="btn" target="_blank">{{ action_text|default:"Get Started" }}</a>
+    </div>
+    {% endif %}
+
+    <p>If you have any questions or need assistance, feel free to reply to this email.</p>
+    <p>Best regards,<br>The Engineering Team</p>
+{% endblock %}
+
