@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celery Asynchronous Email Service</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .app-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 32px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            background: #ffffff;
+        }
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+        pre {
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="container">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="fw-bold mb-1"><i class="bi bi-envelope-paper-heart"></i> Celery Email Service</h2>
+                    <p class="mb-0 text-white-50">Django + Redis Broker + Celery Asynchronous Background Processing</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-light text-dark px-3 py-2"><i class="bi bi-hdd-network"></i> Broker: Redis</span>
+                    <span class="badge bg-light text-dark px-3 py-2 ms-2"><i class="bi bi-database"></i> Backend: django-celery-results</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mb-5">
+        <div class="row g-4">
+            <!-- Form Column -->
+            <div class="col-lg-7">
+                <div class="card p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-send-fill text-primary"></i> Compose Asynchronous Email</h5>
+
+                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-single-tab" data-bs-toggle="pill" data-bs-target="#pills-single" type="button">Single Recipient</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-bulk-tab" data-bs-toggle="pill" data-bs-target="#pills-bulk" type="button">Bulk Recipients</button>
+                        </li>
+                    </ul>
+
+                    <form id="emailForm">
+                        <div class="tab-content" id="pills-tabContent">
+                            <!-- Single Email Tab -->
+                            <div class="tab-pane fade show active" id="pills-single">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Recipient Email *</label>
+                                    <input type="email" class="form-control" id="singleEmail" placeholder="recipient@example.com" value="test@example.com">
+                                </div>
+                            </div>
+
+                            <!-- Bulk Email Tab -->
+                            <div class="tab-pane fade" id="pills-bulk">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Recipients (comma separated) *</label>
+                                    <textarea class="form-control" id="bulkEmails" rows="2" placeholder="user1@example.com, user2@example.com"></textarea>
+                                    <div class="form-text">Enter multiple emails separated by commas.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Subject *</label>
+                            <input type="text" class="form-control" id="emailSubject" value="Asynchronous Task Demo">
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email Template</label>
+                                <select class="form-select" id="emailTemplate">
+                                    <option value="none">Plain Text</option>
+                                    <option value="welcome" selected>HTML: Welcome Template</option>
+                                    <option value="notification">HTML: Notification Template</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Recipient Name (for Template)</label>
+                                <input type="text" class="form-control" id="recipientName" value="Alex Smith">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Message Body</label>
+                            <textarea class="form-control" id="emailMessage" rows="4">This email was queued via the REST API and processed asynchronously by a Celery worker backed by Redis.</textarea>
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            <input type="checkbox" class="form-check-input" id="includeAttachment">
+                            <label class="form-check-label" for="includeAttachment">Include Sample Attachment (bonus feature: sample report file)</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="submitBtn">
+                            <i class="bi bi-lightning-charge-fill"></i> Trigger Celery Background Task
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Monitoring Column -->
+            <div class="col-lg-5">
+                <div class="card p-4 mb-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-cpu text-primary"></i> Background Task Monitor</h5>
+                    
+                    <div id="idleState" class="text-center py-4 text-muted">
+                        <i class="bi bi-clock-history fs-1"></i>
+                        <p class="mt-2 mb-0">No active background task. Send an email to observe asynchronous execution in real-time.</p>
+                    </div>
+
+                    <div id="activeState" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Celery Task ID:</span>
+                            <span class="font-monospace fw-bold small text-primary" id="taskIdDisplay"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-semibold">Status:</span>
+                                <span id="statusBadge" class="badge bg-secondary status-badge">PENDING</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div id="taskProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 50%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small text-muted fw-semibold">Live AsyncResult Output:</label>
+                            <pre id="taskResultJson">Waiting for worker...</pre>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a id="statusApiLink" href="#" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-box-arrow-up-right"></i> Open API Status
+                            </a>
+                            <button id="pollStopBtn" class="btn btn-sm btn-link text-muted" onclick="stopPolling()">Stop Polling</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-3 bg-light border-0">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-info-circle"></i> Quick API Reference</h6>
+                    <small class="text-muted">You can also test the endpoints via curl:</small>
+                    <pre class="mt-2 mb-0" style="font-size: 11px;">curl -X POST http://127.0.0.1:8000/api/send-email/ \
+  -H "Content-Type: application/json" \
+  -d '{"recipient": "user@example.com", "subject": "Hello", "message": "Async test"}'</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let pollTimer = null;
+        let activeTab = 'single';
+
+        document.getElementById('pills-single-tab').addEventListener('click', () => activeTab = 'single');
+        document.getElementById('pills-bulk-tab').addEventListener('click', () => activeTab = 'bulk');
+
+        document.getElementById('emailForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Dispatching to Celery...';
+
+            // Prepare payload
+            const payload = {
+                subject: document.getElementById('emailSubject').value,
+                message: document.getElementById('emailMessage').value,
+                template: document.getElementById('emailTemplate').value,
+                context: {
+                    name: document.getElementById('recipientName').value,
+                    recipient_name: document.getElementById('recipientName').value,
+                    details: {
+                        "Dispatched At": new Date().toLocaleTimeString(),
+                        "Engine": "Celery 5 + Redis"
+                    }
+                }
+            };
+
+            if (activeTab === 'single') {
+                payload.recipient = document.getElementById('singleEmail').value;
+            } else {
+                const bulkRaw = document.getElementById('bulkEmails').value;
+                payload.recipients = bulkRaw.split(',').map(s => s.trim()).filter(Boolean);
+            }
+
+            if (document.getElementById('includeAttachment').checked) {
+                payload.attachments = [{
+                    filename: 'sample_report.txt',
+                    content: 'This is a sample attachment generated by Celery background worker demonstration.',
+                    mimetype: 'text/plain'
+                }];
+            }
+
+            try {
+                const response = await fetch('/api/send-email/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> Trigger Celery Background Task';
+
+                if (response.ok && data.task_id) {
+                    startTrackingTask(data.task_id);
+                } else {
+                    alert('Error queuing task: ' + JSON.stringify(data.errors || data));
+                }
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> Trigger Celery Background Task';
+                alert('Request failed: ' + err.message);
+            }
+        });
+
+        function startTrackingTask(taskId) {
+            stopPolling();
+            document.getElementById('idleState').style.display = 'none';
+            document.getElementById('activeState').style.display = 'block';
+
+            document.getElementById('taskIdDisplay').innerText = taskId;
+            document.getElementById('statusApiLink').href = `/api/email-status/${taskId}/`;
+
+            const badge = document.getElementById('statusBadge');
+            const bar = document.getElementById('taskProgressBar');
+            const resultBox = document.getElementById('taskResultJson');
+
+            badge.className = 'badge bg-warning text-dark status-badge';
+            badge.innerText = 'PENDING';
+            bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning';
+            bar.style.width = '40%';
+            resultBox.innerText = JSON.stringify({ task_id: taskId, status: 'PENDING' }, null, 2);
+
+            let pollCount = 0;
+            pollTimer = setInterval(async () => {
+                pollCount++;
+                try {
+                    const res = await fetch(`/api/email-status/${taskId}/`);
+                    const statusData = await res.json();
+                    resultBox.innerText = JSON.stringify(statusData, null, 2);
+
+                    badge.innerText = statusData.status;
+
+                    if (statusData.ready) {
+                        stopPolling();
+                        if (statusData.successful) {
+                            badge.className = 'badge bg-success status-badge';
+                            bar.className = 'progress-bar bg-success';
+                            bar.style.width = '100%';
+                        } else {
+                            badge.className = 'badge bg-danger status-badge';
+                            bar.className = 'progress-bar bg-danger';
+                            bar.style.width = '100%';
+                        }
+                    } else if (statusData.status === 'STARTED') {
+                        badge.className = 'badge bg-info text-dark status-badge';
+                        bar.style.width = '70%';
+                    } else if (pollCount > 60) {
+                        stopPolling();
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 1000);
+        }
+
+        function stopPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+    </script>
+</body>
+</html>
+
