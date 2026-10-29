@@ -59,6 +59,39 @@ class EmailTasksTestCase(TestCase):
         self.assertEqual(result["successful_count"], 3)
         self.assertEqual(len(mail.outbox), 3)
 
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_periodic_digest_task(self):
+        """Test Celery Beat periodic digest task."""
+        from mailer.tasks import send_periodic_digest_task
+        result = send_periodic_digest_task(recipient_email="admin@example.com")
+        self.assertEqual(result["status"], "SUCCESS")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Periodic System Digest", mail.outbox[0].subject)
+
+    def test_cleanup_old_task_results_task(self):
+        """Test maintenance cleanup task."""
+        from mailer.tasks import cleanup_old_task_results_task
+        from mailer.models import EmailLog
+        from django.utils import timezone
+        import datetime
+
+        # Create an old record
+        old_log = EmailLog.objects.create(
+            task_id="old-task-001",
+            recipient="old@example.com",
+            subject="Old subject",
+            status="SUCCESS"
+        )
+        EmailLog.objects.filter(id=old_log.id).update(
+            created_at=timezone.now() - datetime.timedelta(days=15)
+        )
+
+        res = cleanup_old_task_results_task(days=10)
+        self.assertEqual(res["status"], "SUCCESS")
+        self.assertEqual(res["deleted_email_logs"], 1)
+        self.assertFalse(EmailLog.objects.filter(id=old_log.id).exists())
+
+
 
 class EmailAPITestCase(TestCase):
     def setUp(self):

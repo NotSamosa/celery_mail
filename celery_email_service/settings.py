@@ -128,8 +128,26 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = False
 
-# Celery Beat Database Scheduler
+# Celery Beat Database Scheduler and Crontab Schedules
+from celery.schedules import crontab
+
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CELERY_BEAT_SCHEDULE = {
+    # Send daily digest email every morning at 9:00 AM (Timezone: Asia/Kolkata)
+    'daily-system-digest': {
+        'task': 'mailer.tasks.send_periodic_digest_task',
+        'schedule': crontab(hour=9, minute=0),
+        'args': (),
+    },
+    # Weekly cleanup task running every Sunday at 2:00 AM
+    'weekly-cleanup-old-results': {
+        'task': 'mailer.tasks.cleanup_old_task_results_task',
+        'schedule': crontab(day_of_week=0, hour=2, minute=0),
+        'args': (7,),
+    },
+}
+
 
 # Celery Task Execution Settings
 CELERY_TASK_TRACK_STARTED = True
